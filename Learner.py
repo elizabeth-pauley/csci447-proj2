@@ -1,3 +1,10 @@
+from enum import Enum
+class Accuracy(Enum):
+    TP = 1
+    TN = 2
+    FP = 3
+    FN = 4
+    
 class Learner:
     
     def __init__(self, data, classificationType):
@@ -34,4 +41,17 @@ class Learner:
     def euclideanDistance(point1, point2):
         #return distance 
         pass
-    
+
+    def accuracy(self, trueClass, assignedClass):
+        classNames = list(self.classesData.keys())
+        #decide where classification falls on confusion matrix
+        if trueClass == assignedClass:
+            if trueClass == classNames[0]:
+                return Accuracy.TP
+            else:
+                return Accuracy.TN
+        else:
+            if assignedClass == classNames[0]:
+                return Accuracy.FP
+            else:
+                return Accuracy.FN
