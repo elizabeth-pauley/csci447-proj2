@@ -11,11 +11,16 @@ def main():
 
     breastCancerData =  fetch_ucirepo(id=15)
     breastCancerDataFrame = pd.DataFrame(breastCancerData.data.original)
+    print("regular")
 
     test = Learner.Learner(breastCancerDataFrame, "classification", breastCancerDataFrame.shape[0], "Class")
     classification = test.classification()
     print()
+    print("edited")
     edited = test.editData()
+    print()
+    print("kmeans")
+    kmeans = test.kmeans()
     
 
 main()

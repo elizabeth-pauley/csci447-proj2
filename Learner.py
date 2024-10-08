@@ -3,6 +3,7 @@ import math
 import pandas as pd
 import numpy as np
 import ClassificationInfo
+import Kmeans
 
 class Accuracy(Enum):
     TP = 1
@@ -24,6 +25,7 @@ class Learner:
         self.k = self.tuneData()
         self.folds = self.crossValidation(self.data, self.targetPlace, False)
         self.edited = pd.DataFrame()
+        self.kmeanClusters = 0
 
     def setThreshold(self, data):
         colAverage = data[self.targetPlace].mean()
@@ -102,6 +104,7 @@ class Learner:
 
     def editData(self):
         #run classification and regression on edited data
+        self.kmeanClusters = self.edited.shape[0]
         copy = self.data
         copyFolds = self.folds 
         self.data = self.edited
@@ -264,3 +267,19 @@ class Learner:
                 distances.append((self.euclideanDistance(point, train.iloc[i]), i))
             distances.sort()
             return distances[:k]
+    def kmeans(self):
+        #run kmeans algorithm
+        kmeans = Kmeans.Kmeans(self.kmeanClusters, self.data)
+        centroids = kmeans.getCentroids()
+        copy = self.data
+        copyFolds = self.folds 
+        self.data = centroids
+        self.folds = self.crossValidation(self.data, self.targetPlace, False)
+        if self.classificationType == "classification":
+            output =  self.classification()
+        else:
+            output =  self.regression()
+        self.data = copy
+        self.folds = copyFolds
+        return output
+        
