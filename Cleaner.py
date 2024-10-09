@@ -8,25 +8,23 @@ class cleaner:
 
     def cleaner(self, dataFrame, dropColumns):
 
-        classColumnName = self.dataset.variables.loc[self.dataset.variables['role'] == 'Target', 'name'].values[0]
         columnTypes = dict(zip(self.dataset.variables['name'], self.dataset.variables['type']))
 
         # ADDRESS NULL VALUES WHERE COLUMNS/ROWS NEED TO BE REMOVED
         # If true class is unknown, drop the row
-        dataFrame = dataFrame.dropna(subset=[classColumnName])
+        for column in dropColumns:
+            dataFrame = dataFrame.dropna(subset=[column])
         # Drop any rows where all values are null
         dataFrame = dataFrame.dropna(how = 'all')
         # Columns must have 70% of their values for rows to remain in dataset
         dataFrame = dataFrame.dropna(axis=1, thresh = math.floor(0.70*dataFrame.shape[0]))
 
-        # Remove class/id columns (can be edited later on to be whatever)
-        for column in dropColumns:
-            if column in dataFrame.columns:
-                dataFrame.drop(columns=column)
+        # Remove class/id columns
+        dataFrame = dataFrame.drop(columns=dropColumns, axis = 1)
 
         # Fill remaining empty values with mean of column
-        for column in dataFrame.columns:
-            dataFrame[column] = dataFrame[column].fillna(dataFrame[column].mean())
+        # for column in dataFrame.columns:
+        #     dataFrame[column] = dataFrame[column].fillna(dataFrame[column].mean())
 
         # One Hot Encoding
         categoricalColumns = []
