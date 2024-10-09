@@ -1,102 +1,137 @@
 import numpy as np
 import pandas as pd
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 
 class Kmeans:
     def __init__(self, k, data):
         self.k = k
         self.data = data
-        self.centroids = np.zeros(k)
-        self.clusters = {} # dict to store each centroid + associated points
+        self.centroids = []
+        self.clusters = {}  # dict to store each cluster value + associated centroid and points
+        print("RUN K-MEANS ALGORITHM...")
         self.findClusters()
-    
-    def findClusters(self):
-        # run kmeans algorithm
-        # randomly determine k cluster centroids within the space
-        for c in range(self.k):
-            # randomly generate values between -1 and 1 for initial centroid;
-            # num values = num examples in dataset
-            centroid = 2*(2*np.random.random((self.data.shape[1],))-1) # array of numbers
-            self.centroids[c] = centroid
+        self.displayClusters()
 
-            points = [] # points assigned to given cluster
+    def findClusters(self):
+        print("INITIALIZE K RANDOM CENTROIDS...")
+        # Randomly determine k cluster centroids within the data
+        for c in range(self.k):
+            # Take k random samples from the data for initial centroids
+            centroid = self.data.sample()
+            self.centroids.append(centroid)
+
+            # Store each cluster's data in a dictionary
             cluster = {
                 'centroid': centroid,
-                'points' : []
+                'points': []
             }
-
             self.clusters[c] = cluster
 
-        oldCentroids = self.centroids
-        # initial point assignment
-        self.pointsToClusters()
-        self.recalculateCentroids()
+        # booolean to control print statements
+        displayProcess = True
+        # Initial point assignment to clusters
+        print("ASSIGN POINTS TO INITIAL CLUSTERS...")
+        print("THE FOLLOWING IS AN EXAMPLE OF THE FIRST DATA POINT BEING ASSIGNED A CLUSTER.")
+        self.__pointsToClusters(displayProcess)
+        displayProcess = False
 
-        # recalculate centroids + reassign points until the centroids are no longer changing
-        while(oldCentroids != self.centroids):
-            # oldCentroids will track the previously calculated centroids
-            oldCentroids = self.centroids
-            self.pointsToClusters()
-            self.recalculateCentroids()
+        # Recalculate centroids based on the means of current clusters
+        print("RECALCULATE CENTROIDS AS MEANS OF CURRENT CLUSTERS...")
+        self.__recalculateCentroids()
 
-        # create array of final cluster predictions for each datapoint
-        self.centroids = pd.DataFrame(self.finalPredictCluster())
+        # Iterate the assignment of points to clusters and recalculation of clusters until
+        # the previous centroids have only a 5% overall difference from the most recently calculated centroids
+        centroids_changed = True
+        movement_threshold = 0.90  # 5% threshold
 
-    # HELPER METHODS FOR K-MEANS ALGORITHM
-    def __euclideanDistance(p1, p2):
+        print("REPEAT THIS PROCESS UNTIL CENTROIDS EXPERIENCE <= 5% OVERALL CHANGE FROM THE LAST CENTROIDS...")
+        while centroids_changed:
+            oldCentroids = np.array([c.values.flatten() for c in self.centroids])  # Store old centroids before updating clusters
+            self.__pointsToClusters(displayProcess)
+            self.__recalculateCentroids()
+            newCentroids = np.array([c.values.flatten() for c in self.centroids])
+
+            # Check if centroids have changed based on the threshold
+            differences = np.abs(newCentroids - oldCentroids) / (np.abs(oldCentroids) + 1e-10)
+            centroids_changed = np.any(differences > movement_threshold)
+
+        # Determine final cluster predictions for each value
+        print("DETERMINE FINAL CLUSTER PREDICTIONS FOR EACH DATA POINT...")
+        self.predictions = self.__finalPredictCluster()
+        print("K-MEANS COMPLETE")
+
+    def __euclideanDistance(self, p1, p2):
         return np.sqrt(np.sum((p1 - p2) ** 2))
 
-    def __pointsToClusters(self):
-        numRows = self.data.shape[0]
-        for row in range(numRows):
-            # store distances between point and centroids
+    def __pointsToClusters(self, displayProcess):
+        for i in range(self.k):
+            self.clusters[i]['points'] = []  # Clear previous points
+
+        # For each example in the dataset...
+        for i in range(self.data.shape[0]):
+            row = self.data.iloc[i]
+            if i == 0 and displayProcess:
+                print("First example being assigned a cluster: ")
+                print(row)
             distances = []
 
-            currEx = self.data[row]
-
-            # calculate distance between given point and each current centroid
-            for i in range(self.k):
-                dist = self.euclideanDistance(currEx, self.centroids[i])
+            # Calculate distance between given example and each current centroid
+            if i == 0 and displayProcess:
+                print(f"Calculating distances between first example and centroids 0 through {self.k}...")
+            for j in range(self.k):
+                dist = self.__euclideanDistance(row.values, self.centroids[j])
                 distances.append(dist)
-                # choose cluster based on closest distance
-                assignedCluster = np.argmin(distances)
-                # store point in associated cluster's array of points
-                self.clusters[assignedCluster]['points'].append(currEx)
-            return self.clusters
+            # Choose predicted cluster based on closest distance
+            assignedCluster = np.argmin(distances)
+            if i == 0 and displayProcess:
+                print(f"The closest centroid is centroid {assignedCluster}. Adding first example to the associated cluster...")
+
+            # Add example to cluster associated with closest centroid
+            self.clusters[assignedCluster]['points'].append(row)
 
     def __recalculateCentroids(self):
         for i in range(self.k):
-            # local instance of points for given centroid
             points = np.array(self.clusters[i]['points'])
-
+            # If a given cluster has been assigned data points...
             if points.shape[0] > 0:
-                # newCentroid = mean of current cluster
-                newCentroid = points.mean(axis = 0)
-                self.clusters[i]['center'] = newCentroid
-                self.centroids[i] = newCentroid
-
-                # empty out 'points' array so that they can be re-assessed with the new centroids
-                self.clusters[i]['points'] = []
-        return self.clusters
+                # Recalculate the centroid as the mean of all data points within
+                newCentroid = points.mean(axis=0)
+                self.clusters[i]['centroid'] = newCentroid
+                self.centroids[i] = pd.DataFrame(newCentroid).T  # Store back as DataFrame for future use (to track old and new centroids)
 
     def __finalPredictCluster(self):
+        # Store final cluster assignments here
         predictions = []
-        # for each row in the dataset...
-        for i in range(self.data.shape[0]):
-            distances = []
-            # calculate distance between given point and each cluster centroid
-            for j in range(self.k):
-                distances.append(self.euclideanDistance(self.data[i], self.centroids(self.k)))
 
-            # append predicted cluster index based on which centroid is closest to the given point
-            predictions.append(np.argmin(distances))
+        # Same as pointsToClusters(), except we are just adding each prediction to an array (to be returned later)
+        for i in range(self.data.shape[0]):
+            row = self.data.iloc[i]
+            distances = []
+
+            for j in range(self.k):
+                dist = self.__euclideanDistance(row.values, self.centroids[j])
+                distances.append(dist)
+            minDistIndex = np.argmin(distances)
+            predictions.append(minDistIndex)
         return predictions
 
-    # END HELPER METHODS
-
     def getCentroids(self):
-        return self.centroids
-    
+        return pd.DataFrame(self.centroids)
+
+    def getPredictions(self):
+        return self.predictions
+
     def displayClusters(self):
-        # show graph of clusters 
-        pass
-    
+        # Implement PCA to reduce to 2 dimensions
+        # graph data w/ colors being clusters
+        # red set aside for centroids
+        print("DATA: ")
+        print(self.data.isna().count())
+        #dataPCA = PCA(n_components=2)
+        #dataTransformed = dataPCA.fit_transform(self.data)
+
+        #plt.scatter(dataTransformed[:, 0], dataTransformed[:, 1], color=self.predictions)
+        #plt.title('2D Projection of PCA Transformed Dataset, Colored by Cluster')
+        #plt.xlabel("First PCA")
+        #plt.ylabel("Second PCA")
