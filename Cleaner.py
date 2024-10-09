@@ -6,7 +6,7 @@ class cleaner:
     def __init__(self, dataset):
         self.dataset = dataset
 
-    def cleaner(self, dataFrame):
+    def cleaner(self, dataFrame, dropColumns):
 
         classColumnName = self.dataset.variables.loc[self.dataset.variables['role'] == 'Target', 'name'].values[0]
         columnTypes = dict(zip(self.dataset.variables['name'], self.dataset.variables['type']))
@@ -19,6 +19,15 @@ class cleaner:
         # Columns must have 70% of their values for rows to remain in dataset
         dataFrame = dataFrame.dropna(axis=1, thresh = math.floor(0.70*dataFrame.shape[0]))
 
+        # Remove class/id columns (can be edited later on to be whatever)
+        for column in dropColumns:
+            if column in dataFrame.columns:
+                dataFrame.drop(columns=column)
+
+        # Fill remaining empty values with mean of column
+        for column in dataFrame.columns:
+            dataFrame[column] = dataFrame[column].fillna(dataFrame[column].mean())
+
         # One Hot Encoding
         categoricalColumns = []
         for columnName in dataFrame.columns:
@@ -26,7 +35,7 @@ class cleaner:
 
             #ignore class column
             if columnRole != 'Target':
-                if columnTypes[columnName] == 'Categorical':
+                if (columnTypes[columnName] == 'Categorical'):
                     # add to list to one-hot encode
                     categoricalColumns.append(columnName)
 
