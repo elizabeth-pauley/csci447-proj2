@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 
 class Kmeans:
     def __init__(self, k, data):
@@ -10,6 +11,7 @@ class Kmeans:
         self.clusters = {}  # dict to store each cluster value + associated centroid and points
         print("RUN K-MEANS ALGORITHM...")
         self.findClusters()
+        self.displayClusters()
 
     def findClusters(self):
         print("INITIALIZE K RANDOM CENTROIDS...")
@@ -41,7 +43,7 @@ class Kmeans:
         # Iterate the assignment of points to clusters and recalculation of clusters until
         # the previous centroids have only a 5% overall difference from the most recently calculated centroids
         centroids_changed = True
-        movement_threshold = 0.05  # 5% threshold
+        movement_threshold = 0.90  # 5% threshold
 
         print("REPEAT THIS PROCESS UNTIL CENTROIDS EXPERIENCE <= 5% OVERALL CHANGE FROM THE LAST CENTROIDS...")
         while centroids_changed:
@@ -115,11 +117,21 @@ class Kmeans:
         return predictions
 
     def getCentroids(self):
-        return self.centroids
+        return pd.DataFrame(self.centroids)
 
     def getPredictions(self):
         return self.predictions
 
     def displayClusters(self):
-        # Implement visualization logic
-        pass
+        # Implement PCA to reduce to 2 dimensions
+        # graph data w/ colors being clusters
+        # red set aside for centroids
+        print("DATA: ")
+        print(self.data.isna().count())
+        #dataPCA = PCA(n_components=2)
+        #dataTransformed = dataPCA.fit_transform(self.data)
+
+        #plt.scatter(dataTransformed[:, 0], dataTransformed[:, 1], color=self.predictions)
+        #plt.title('2D Projection of PCA Transformed Dataset, Colored by Cluster')
+        #plt.xlabel("First PCA")
+        #plt.ylabel("Second PCA")
