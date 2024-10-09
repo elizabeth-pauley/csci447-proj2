@@ -16,7 +16,6 @@ class Learner:
     def __init__(self, data, classificationType, targetPlace):
         self.classificationType = classificationType
         self.size = data.shape[0]
-        self.euclidean = {}
         self.targetPlace = targetPlace
         self.threshold = None
         self.k = None
@@ -25,9 +24,27 @@ class Learner:
             self.setThreshold(data)
         self.tuningData = self.getTuneData(data)
         self.data = data.drop(self.tuningData.index)
+        self.euclidean = {}
+        self.createDistances()
         self.folds = self.crossValidation(self.data, self.targetPlace, False)
         self.tuneData()
         self.edited = pd.DataFrame()
+
+    def createDistances(self):
+        print("Creating distances...")
+        #create distances for euclidean distance
+        for i in range(self.data.shape[0]):
+            if(i > (self.data.shape[0] / 4)):
+                print("1/4 done with creating distances...")
+            elif(i > (self.data.shape[0] / 2)):
+                print("Halfway done with creating distances...")
+            elif(i > (self.data.shape[0] * 0.75)):
+                print("3/4 done with creating distances...")
+            self.euclidean[str(self.data.iloc[i])] = {}
+            for j in range(self.data.shape[0]):
+                if i != j:
+                    distance = (self.euclideanDistance(self.data.iloc[i], self.data.iloc[j]), j)
+                    self.euclidean[str(self.data.iloc[i])][str(self.data.iloc[j])] = distance
 
     def setThreshold(self, data):
         colAverage = data[self.targetPlace].mean()
@@ -280,26 +297,12 @@ class Learner:
 
         if( k == -1):
             for i in range(train.shape[0]):
-                if (point, train.iloc[i]) in self.euclidean:
-                    distances.append(self.euclidean[point, train.iloc[i]])
-                elif (train.iloc[i], point) in self.distances:
-                    distances.append(self.euclidean[train.iloc[i], point])
-                else:
-                    distance = (self.euclideanDistance(point, train.iloc[i]), i)
-                    distances.append(distance)
-                    self.distances[point, train.iloc[i]] = distance
+                distances.append(self.euclidean[str(point)][str(train.iloc[i])])
             distances.sort()
             return distances[:self.k]
         else:
             for i in range(train.shape[0]):
-                if (point, train.iloc[i]) in self.euclidean:
-                    distances.append(self.euclidean[point, train.iloc[i]])
-                elif (train.iloc[i], point) in self.distances:
-                    distances.append(self.euclidean[train.iloc[i], point])
-                else:
-                    distance = (self.euclideanDistance(point, train.iloc[i]), i)
-                    distances.append(distance)
-                    self.distances[point, train.iloc[i]] = distance
+                distances.append(self.euclidean[str(point)][str(train.iloc[i])])
             distances.sort()
             return distances[:k]
     def kmeans(self):

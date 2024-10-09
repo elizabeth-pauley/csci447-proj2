@@ -18,6 +18,8 @@ def main():
 
     print(abaloneDataFrame.head())
 
+    print("tuning")
+
     testRegression = Learner.Learner(abaloneDataFrame, "regression", "Rings")
 
     print()
