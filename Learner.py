@@ -22,29 +22,28 @@ class Learner:
         self.kernel = None
         if(self.classificationType == "regression"):
             self.setThreshold(data)
+        self.data = data
+        self.euclidean = np.zeros((self.size, self.size))
+        self.pointIndex = {}
+        self.createDistances()
         self.tuningData = self.getTuneData(data)
         self.data = data.drop(self.tuningData.index)
-        self.euclidean = {}
-        self.createDistances()
         self.folds = self.crossValidation(self.data, self.targetPlace, False)
         self.tuneData()
         self.edited = pd.DataFrame()
 
     def createDistances(self):
+        n = self.data.shape[0]
         print("Creating distances...")
         #create distances for euclidean distance
-        for i in range(self.data.shape[0]):
-            if(i > (self.data.shape[0] / 4)):
-                print("1/4 done with creating distances...")
-            elif(i > (self.data.shape[0] / 2)):
-                print("Halfway done with creating distances...")
-            elif(i > (self.data.shape[0] * 0.75)):
-                print("3/4 done with creating distances...")
-            self.euclidean[str(self.data.iloc[i])] = {}
-            for j in range(self.data.shape[0]):
-                if i != j:
-                    distance = (self.euclideanDistance(self.data.iloc[i], self.data.iloc[j]), j)
-                    self.euclidean[str(self.data.iloc[i])][str(self.data.iloc[j])] = distance
+        for i in range(n):
+            print("on index: ", i, " out of ", n)
+            for j in range(i + 1, n):
+                distance = self.euclideanDistance(self.data.iloc[i], self.data.iloc[j])
+                self.pointIndex[str(self.data.iloc[i])] = i
+                self.pointIndex[str(self.data.iloc[j])] = j
+                self.euclidean[i, j] = distance
+                self.euclidean[j, i] = distance  # The distance is symmetric
 
     def setThreshold(self, data):
         colAverage = data[self.targetPlace].mean()
@@ -178,6 +177,7 @@ class Learner:
 
         for i in range(self.tuningData.shape[0]):
             neighbors = self.findNeighbors(self.tuningData.iloc[i], train ,k)
+            print("neighbors: ", neighbors)
             correctValue = self.tuningData.iloc[i][self.targetPlace]
             numerator = 0
             denominator = 0
@@ -236,6 +236,8 @@ class Learner:
         for fold in self.folds: 
             train = self.data.drop(fold)
             for i in range(fold.shape[0]):
+                sum = 0
+                total = 0
                 neighbors = self.findNeighbors(fold.iloc[i], train)
                 correctValue = fold.iloc[i][self.targetPlace]
                 numerator = 0
@@ -251,8 +253,11 @@ class Learner:
                 if(classAccuracy == Accuracy.TP or classAccuracy == Accuracy.TN):
                     data_df = pd.DataFrame([fold.iloc[i]])
                     self.edited = pd.concat([self.edited, data_df])
+                    sum += 1
+                total += 1
                 classification.addTrueClass([correctValue, assignedValue])
                 classification.addConfusion(classAccuracy)
+                print("fold accuracy: ", sum/total)
 
         return classification
 
@@ -297,12 +302,18 @@ class Learner:
 
         if( k == -1):
             for i in range(train.shape[0]):
-                distances.append(self.euclidean[str(point)][str(train.iloc[i])])
+                k = self.pointIndex[str(train.iloc[i])]
+                j = self.pointIndex[str(point)]
+                distance = self.euclidean[k][j]
+                distances.append([distance, i])
             distances.sort()
             return distances[:self.k]
         else:
             for i in range(train.shape[0]):
-                distances.append(self.euclidean[str(point)][str(train.iloc[i])])
+                k = self.pointIndex[str(train.iloc[i])]
+                j = self.pointIndex[str(point)]
+                distance = self.euclidean[k][j]
+                distances.append([distance, i])
             distances.sort()
             return distances[:k]
     def kmeans(self):

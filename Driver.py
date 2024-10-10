@@ -12,15 +12,28 @@ def main():
     breastCancerData =  fetch_ucirepo(id=15)
     breastCancerDataFrame = pd.DataFrame(breastCancerData.data.original)
 
+    glassData =  fetch_ucirepo(id=42)
+    glassrDataFrame = pd.DataFrame(glassData.data.original)
+
+    soybeanData =  fetch_ucirepo(id=91)
+    soybeanDataFrame = pd.DataFrame(soybeanData.data.original)
+
+
     abalone = fetch_ucirepo(id=1) 
     abaloneDataFrame = pd.DataFrame(abalone.data.original)
-    abaloneDataFrame = abaloneDataFrame.drop('Sex', axis=1)
 
-    print(abaloneDataFrame.head())
+    computerHardwareData =  fetch_ucirepo(id=29)
+    computerHardwareDataFrame = pd.DataFrame(computerHardwareData.data.original)
 
-    print("tuning")
+    forestFiresData =  fetch_ucirepo(id=162)
+    forestFiresDataFrame = pd.DataFrame(forestFiresData.data.original)
 
-    testRegression = Learner.Learner(abaloneDataFrame, "regression", "Rings")
+    computerHardwareDataFrame = computerHardwareDataFrame.drop('VendorName', axis=1)
+    computerHardwareDataFrame = computerHardwareDataFrame.drop('ModelName', axis=1)
+
+    print(computerHardwareDataFrame.head())
+
+    testRegression = Learner.Learner(computerHardwareDataFrame, "regression", "ERP")
 
     print()
     print("regular")
