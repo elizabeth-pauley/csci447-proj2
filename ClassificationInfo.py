@@ -7,7 +7,7 @@ class Accuracy(Enum):
 
 class ClassificationInfo:
     def __init__(self):
-        self.trueClasses = [] # [[trueClass, AssignedClass], [trueClass, AssignedClass], ...]
+        self.trueClasses = [] # [[trueClass, AssignedClass], [trueClass,    ], ...]
         self.FP = 0
         self.FN = 0
         self.TP = 0

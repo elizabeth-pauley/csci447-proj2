@@ -28,22 +28,25 @@ class Learner:
         self.createDistances()
         self.tuningData = self.getTuneData(data)
         self.data = data.drop(self.tuningData.index)
-        self.folds = self.crossValidation(self.data, self.targetPlace, False)
+        if self.classificationType == "classification":
+            self.folds = self.crossValidation(self.data, self.targetPlace, True)
+        else:
+            self.folds = self.crossValidationRegression(self.data.copy(), self.targetPlace, False)
         self.tuneData()
         self.edited = pd.DataFrame()
 
     def createDistances(self):
-        n = self.data.shape[0]
         print("Creating distances...")
+        n = self.data.shape[0]
         #create distances for euclidean distance
         for i in range(n):
-            print("on index: ", i, " out of ", n)
+            print("on index ", i, " of ", n)
             for j in range(i + 1, n):
                 distance = self.euclideanDistance(self.data.iloc[i], self.data.iloc[j])
                 self.pointIndex[str(self.data.iloc[i])] = i
                 self.pointIndex[str(self.data.iloc[j])] = j
                 self.euclidean[i, j] = distance
-                self.euclidean[j, i] = distance  # The distance is symmetric
+                self.euclidean[j, i] = distance 
 
     def setThreshold(self, data):
         colAverage = data[self.targetPlace].mean()
@@ -56,8 +59,8 @@ class Learner:
         return tune_data
 
     def tuneData(self):
-        # Tune the data
         print("Tuning data...")
+        # Tune the data
         centerK = round(math.sqrt(self.size))
         start = max(0, centerK - 2 * 2)
         end = min(self.size, centerK + 2 * 2)
@@ -70,7 +73,7 @@ class Learner:
         classifications = {}
         if self.classificationType == "classification":
             for k in possibleK:
-                train = self.data.drop(self.folds[count % 10].index)
+                train = self.data
                 accuracy = self.tuneClassification(k, train)
                 classifications[accuracy] = k
                 count += 1
@@ -81,9 +84,7 @@ class Learner:
         else:
             for k in possibleK:
                 for kernel in possibleKernel:
-                    print("test k = ", k)
-                    print("test kernel = ", kernel)
-                    train = self.data.drop(self.folds[count % 10].index)
+                    train = self.data
                     accuracy = self.tuneRegression(k, kernel, train)
                     classifications[accuracy] = [k, kernel]
                     count += 1
@@ -94,11 +95,19 @@ class Learner:
             print("best k = ", self.k)
             print("best kernel = ", self.kernel)
 
+    def crossValidationRegression(self, cleanDataset, classColumn, printSteps):
+        print("Running cross validation with stratification...")
+        dataChunks = []
+        for i in range(10):
+            dataChunks.append(cleanDataset.sample(frac=0.1))
+            cleanDataset = cleanDataset.drop(dataChunks[i].index)
+        return dataChunks
+
     def crossValidation(self, cleanDataset, classColumn, printSteps):
-        print("Running cross validation...")
-    # 10-fold cross validation with stratification of classes
+        print("Running cross validation with stratification...")
+        # 10-fold cross validation with stratification of classes
         if printSteps == True:
-            print("Running cross calidation with stratification...")
+            print("Running cross validation with stratification...")
         dataChunks = [None] * 10
         classes = np.unique(cleanDataset[classColumn])
         dataByClass = dict()
@@ -123,7 +132,7 @@ class Learner:
 
                 classSubset = classSubset.drop(classChunk.index)
 
-            # the last chunk might be slightly different size if dataset size is not divisible by 10
+        # the last chunk might be slightly different size if dataset size is not divisible by 10
             if printSteps == True:
                 print("Number of values for class " + str(uniqueVal), " in fold " + str(10) + " is: " + str(classSubset.shape[0]))
             dataChunks[9] = pd.concat([dataChunks[9], classSubset])
@@ -140,10 +149,11 @@ class Learner:
         copy = self.data
         copyFolds = self.folds 
         self.data = self.edited
-        self.folds = self.crossValidation(self.data, self.targetPlace, False)
         if self.classificationType == "classification":
+            self.folds = self.crossValidation(self.data, self.targetPlace, False)
             output =  self.classification()
         else:
+            self.folds = self.crossValidationRegression(self.data.copy(), self.targetPlace, False)
             output =  self.regression()
         self.data = copy
         self.folds = copyFolds
@@ -177,7 +187,6 @@ class Learner:
 
         for i in range(self.tuningData.shape[0]):
             neighbors = self.findNeighbors(self.tuningData.iloc[i], train ,k)
-            print("neighbors: ", neighbors)
             correctValue = self.tuningData.iloc[i][self.targetPlace]
             numerator = 0
             denominator = 0
@@ -192,15 +201,23 @@ class Learner:
             total += 1
         return sum / total
     
-    def classification(self):
+    def classification(self, printSteps=False):
+        count = 0
         classification = ClassificationInfo.ClassificationInfo()
         # return the classification info for each dataset
-        for fold in self.folds: 
+        for fold in self.folds:          
             train = self.data.drop(fold.index)
             total = 0
             sum = 0
             for i in range(fold.shape[0]):
                 neighbors = self.findNeighbors(fold.iloc[i], train)
+                if(printSteps and count == 0):
+                    print("Classifying point ")
+                    print(fold.iloc[i])
+                    print()
+                    print("Neighbors: ")
+                    for neighbor in neighbors:
+                        print(train.iloc[neighbor[1]])
                 correctClass = fold.iloc[i][self.targetPlace]
                 assignedClasses = {}
                 for neighbor in neighbors:
@@ -210,6 +227,8 @@ class Learner:
                     else:
                         assignedClasses[neighborClass] = 1
                 assignedClass = max(assignedClasses, key=assignedClasses.get)
+                if(printSteps and count == 0):
+                    print("Assigned class: ", assignedClass)
                 classAccuracy = self.classificationAccuracy(correctClass, assignedClass)
                 if(classAccuracy == Accuracy.TP or classAccuracy == Accuracy.TN):
                     data_df = pd.DataFrame([fold.iloc[i]])
@@ -218,27 +237,38 @@ class Learner:
                 total += 1
                 classification.addTrueClass([correctClass, assignedClass])
                 classification.addConfusion(classAccuracy)
-            print("fold accuracy: ", sum/total)
-            print() 
+                count += 1
 
         return classification
     
-    def kernelWeight(self, point1, point2, kernel):
+    def kernelWeight(self, point1, point2, kernel, printSteps=False):
         #return weight
         squaredDist = abs(self.euclideanDistance(point1, point2)) ** 2
+        if printSteps:
+            print("calculating euclidean distance between two points and taking absolute value squared...")
+            print("squared distance: ", squaredDist)
+            print("Taking the exponential of the squared distance over 2*kernel^2...")
         return math.exp(-squaredDist / (2 * kernel ** 2))
         
 
-    def regression(self):
+    def regression(self, printSteps=False):
         classification = ClassificationInfo.ClassificationInfo()
+        count = 0
         # return the regression classification info 
         # return the classification info for each dataset
         for fold in self.folds: 
-            train = self.data.drop(fold)
+            train = self.data.drop(fold.index)
+            total = 0
+            sum = 0
             for i in range(fold.shape[0]):
-                sum = 0
-                total = 0
                 neighbors = self.findNeighbors(fold.iloc[i], train)
+                if(printSteps and count == 0):
+                    print("Regressing point ")
+                    print(fold.iloc[i])
+                    print()
+                    print("Neighbors: ")
+                    for neighbor in neighbors:
+                        print(train.iloc[neighbor[1]])
                 correctValue = fold.iloc[i][self.targetPlace]
                 numerator = 0
                 denominator = 0
@@ -247,7 +277,12 @@ class Learner:
                     value = train.iloc[neighbor[1]][self.targetPlace]
                     numerator += (weight * value)
                     denominator += weight
-                assignedValue = numerator/denominator
+                if denominator == 0:
+                    assignedValue = 0
+                else:
+                    assignedValue = numerator/denominator
+                if(printSteps and count == 0):
+                    print("Assigned value: ", assignedValue)
 
                 classAccuracy = self.regressionAccuracy(correctValue, assignedValue)
                 if(classAccuracy == Accuracy.TP or classAccuracy == Accuracy.TN):
@@ -257,16 +292,22 @@ class Learner:
                 total += 1
                 classification.addTrueClass([correctValue, assignedValue])
                 classification.addConfusion(classAccuracy)
-                print("fold accuracy: ", sum/total)
+            print("fold accuracy: ", sum/total)
 
         return classification
 
-    def euclideanDistance(self, point1, point2):
+    def euclideanDistance(self, point1, point2, printSteps=False):
         #return distance 
+        if printSteps:
+            print("Calculating Euclidean distance between two points...")
         featuresSum = 0
         for i in range(self.data.shape[1]):
+            if(printSteps):
+                print("adding ", (point2.iloc[i] - point1.iloc[i])**2 , "to feature sum")
             featuresSum += (point2.iloc[i] - point1.iloc[i])**2
 
+        if printSteps:
+            print("Taking the square root of the feature sum...")
         return math.sqrt(featuresSum)
 
     def classificationAccuracy(self, trueClass, assignedClass):
@@ -299,20 +340,19 @@ class Learner:
     def findNeighbors(self, point, train, k=-1):
         #find the k nearest neighbors
         distances = []
-
         if( k == -1):
             for i in range(train.shape[0]):
-                k = self.pointIndex[str(train.iloc[i])]
+                f = self.pointIndex[str(train.iloc[i])]
                 j = self.pointIndex[str(point)]
-                distance = self.euclidean[k][j]
+                distance = self.euclidean[f][j]
                 distances.append([distance, i])
             distances.sort()
             return distances[:self.k]
         else:
             for i in range(train.shape[0]):
-                k = self.pointIndex[str(train.iloc[i])]
+                f = self.pointIndex[str(train.iloc[i])]
                 j = self.pointIndex[str(point)]
-                distance = self.euclidean[k][j]
+                distance = self.euclidean[f][j]
                 distances.append([distance, i])
             distances.sort()
             return distances[:k]
@@ -323,11 +363,11 @@ class Learner:
         copy = self.data
         copyFolds = self.folds 
         self.data = centroids
-        print(self.data.head(20))
-        self.folds = self.crossValidation(self.data, self.targetPlace, False)
         if self.classificationType == "classification":
+            self.folds = self.crossValidationRegression(self.data.copy(), self.targetPlace, False)
             output =  self.classification()
         else:
+            self.folds = self.crossValidationRegression(self.data.copy(), self.targetPlace, False)
             output =  self.regression()
         self.data = copy
         self.folds = copyFolds
