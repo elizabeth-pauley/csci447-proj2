@@ -12,32 +12,27 @@ def main():
     ssl._create_default_https_context = ssl._create_unverified_context
 
     # INITIALIZE DATASETS
-    print("BREAST CANCER")
+    print("FETCH AND CLEAN DATASETS...")
     breastCancerData =  fetch_ucirepo(id=15)
     breastCancerDataFrame = pd.DataFrame(breastCancerData.data.original)
     breastCancerClean = Cleaner.cleaner(breastCancerData).cleaner(breastCancerDataFrame, ['Sample_code_number'], 'Class')
 
-    print("GLASS")
     glassData =  fetch_ucirepo(id=42)
     glassDataFrame = pd.DataFrame(glassData.data.original)
     glassClean = Cleaner.cleaner(glassData).cleaner(glassDataFrame, ['Id_number'], 'Type_of_glass')
 
-    print("SOYBEAN")
     soybeanData =  fetch_ucirepo(id=91)
     soybeanDataFrame = pd.DataFrame(soybeanData.data.original)
     soybeanClean = Cleaner.cleaner(soybeanData).cleaner(soybeanDataFrame, [], 'class')
 
-    print("ABALONE")
     abaloneData = fetch_ucirepo(id=1)
     abaloneDataFrame = pd.DataFrame(abaloneData.data.original)
     abaloneClean = Cleaner.cleaner(abaloneData).cleaner(abaloneDataFrame, [], 'Rings')
 
-    print("COMPUTER HARDWARE")
     computerHardwareData =  fetch_ucirepo(id=29)
     computerHardwareDataFrame = pd.DataFrame(computerHardwareData.data.original)
     computerClean = Cleaner.cleaner(computerHardwareData).cleaner(computerHardwareDataFrame, [], 'ERP')
 
-    print("FOREST FIRES")
     forestFiresData =  fetch_ucirepo(id=162)
     forestFiresDataFrame = pd.DataFrame(forestFiresData.data.original)
     forestClean = Cleaner.cleaner(forestFiresData).cleaner(forestFiresDataFrame, [], 'area')
@@ -72,66 +67,24 @@ def main():
     print("Loss: " + str(kmeansGlassAccuracy.getLoss()))
     print()
 
-    # # CLASSIFICATION + REGRESSION FOR DATASETS
-    # # BREAST CANCER
-    # print("BREAST CANCER CODE...")
-    # cancerClassLearner = Learner.Learner(computerHardwareDataFrame, "classification", "Class")
-    # print("\nbreast cancer regular")
-    # cancerClassification = cancerClassLearner.classification()
-    # print("\nbreast cancer edited")
-    # cancerEdited = cancerClassLearner.editData()
-    # print("\nbreast cancer kmeans")
-    # cancerKmeans = cancerClassLearner.kmeans()
-    #
-    # # GLASS
-    # print("GLASS CODE...")
-    # glassClassLearner = Learner.Learner(glassDataFrame, "classification", "Type_of_glass")
-    # print("\nglass regular")
-    # glassClassification = glassClassLearner.classification()
-    # print("\nglass edited")
-    # glassEdited = glassClassLearner.editData()
-    # print("\nglass kmeans")
-    # glassKmeans = glassClassLearner.kmeans()
-    #
-    # # SOYBEAN
-    # print("SOYBEAN CODE...")
-    # soybeanClassLearner = Learner.Learner(soybeanDataFrame, "classification", "class")
-    # print("\nsoybean regular")
-    # soybeanClassification = soybeanClassLearner.classification()
-    # print("\nsoybean edited")
-    # soybeanEdited = soybeanClassLearner.editData()
-    # print("\nsoybean kmeans")
-    # soybeanKmeans = soybeanClassLearner.kmeans()
-    #
-    # # ABALONE
-    # print("ABALONE CODE...")
-    # abaloneRegLearner = Learner.Learner(abaloneDataFrame, "regression", "Rings")
-    # print("\nabalone regular")
-    # abaloneRegression = abaloneRegLearner.regression()
-    # print("\nabalone edited")
-    # abaloneEdited = abaloneRegLearner.editData()
-    # print("\nabalone kmeans")
-    # abaloneKmeans = abaloneRegLearner.kmeans()
-    #
-    # # COMPUTER HARDWARE
-    # print("COMPUTER HARDWARE CODE...")
-    # compRegLearner = Learner.Learner(computerHardwareDataFrame, "regression", "ERP")
-    # print("\ncomputer hardware regular")
-    # compRegression = compRegLearner.regression()
-    # print("\ncomputer hardware edited")
-    # compEdited = compRegLearner.editData()
-    # print("\ncomputer hardware kmeans")
-    # compKmeans = compRegLearner.kmeans()
-    #
-    # # FOREST FIRE
-    # print("FOREST FIRE CODE...")
-    # forestRegLearner = Learner.Learner(forestFiresDataFrame, "regression", "ERP")
-    # print("\nforest fire regular")
-    # forestRegression = forestRegLearner.regression()
-    # print("\nedited")
-    # forestEdited = forestRegLearner.editData()
-    # print("\ncomputer hardware kmeans")
-    # forestKmeans = forestRegLearner.kmeans()
+    print("CLASSIFICATION, REGRESSION, KMEANS...")
+    # CLASSIFICATION + REGRESSION FOR DATASETS
+    # BREAST CANCER
+    print("BREAST CANCER CODE...")
+
+
+    print("BREAST CANCER CODE")
+    plot("Breast Cancer", breastCancerDataFrame, breastCancerClean, "classification", "Class")
+    print("GLASS CODE")
+    plot("Glass Identification", glassDataFrame, glassClean, "classification", "Type_of_glass")
+    print("SOYBEAN CODE")
+    plot("Soybean", soybeanDataFrame, soybeanClean, "classification", "class")
+    print("ABALONE CODE")
+    plot("Abalone", abaloneDataFrame, abaloneClean, "regression", "Rings")
+    print("COMPUTER HARDWARE CODE")
+    plot("Computer Hardware", computerHardwareDataFrame, computerClean, "regression", "ERP")
+    print("FOREST FIRES CODE")
+    plot("Forest Fires", forestFiresDataFrame, forestClean, "regression", "area")
 
     # END CLASSIFICATION + REGRESSION FOR DATASETS
 
@@ -178,6 +131,14 @@ def main():
     #print("kmeans")
     #kmeans = test.kmeans()
 
-    
-
 main()
+
+
+def plot(title, dataFrame, dataClean, typeAlg, classColName):
+    dataClassLearner = Learner.Learner(dataFrame, typeAlg, classColName)
+    dataClassification = dataClassLearner.classification()
+    dataClassificationAccuracy = AlgorithmAccuracy.AlgorithmAccuracy(dataClassification, len(dataClean[0].columns),f"{title} Initial K-NN")
+    dataEdited = dataClassLearner.editData()
+    dadtaEditedAccuracy = AlgorithmAccuracy.AlgorithmAccuracy(dataEdited, len(dataClean[0].columns),f"{title} Edited K-NN")
+    dataKmeans = dataClassLearner.kmeans()
+    dataKmeansAccuracy = AlgorithmAccuracy.AlgorithmAccuracy(dataKmeans, len(dataClean[0].columns),f"{title} K-Means K-NN")
