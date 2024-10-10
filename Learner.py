@@ -36,17 +36,19 @@ class Learner:
         self.edited = pd.DataFrame()
 
     def createDistances(self):
+        count = 0
         print("Creating distances...")
         n = self.data.shape[0]
         #create distances for euclidean distance
         for i in range(n):
             print("on index ", i, " of ", n)
             for j in range(i + 1, n):
-                distance = self.euclideanDistance(self.data.iloc[i], self.data.iloc[j])
+                distance = self.euclideanDistance(self.data.iloc[i], self.data.iloc[j], (count == 0))
                 self.pointIndex[str(self.data.iloc[i])] = i
                 self.pointIndex[str(self.data.iloc[j])] = j
                 self.euclidean[i, j] = distance
                 self.euclidean[j, i] = distance 
+                count += 1
 
     def setThreshold(self, data):
         colAverage = data[self.targetPlace].mean()
@@ -273,7 +275,7 @@ class Learner:
                 numerator = 0
                 denominator = 0
                 for neighbor in neighbors:
-                    weight = self.kernelWeight(fold.iloc[i], train.iloc[neighbor[1]], self.kernel)
+                    weight = self.kernelWeight(fold.iloc[i], train.iloc[neighbor[1]], self.kernel, (printSteps and count == 0))
                     value = train.iloc[neighbor[1]][self.targetPlace]
                     numerator += (weight * value)
                     denominator += weight
@@ -342,9 +344,19 @@ class Learner:
         distances = []
         if( k == -1):
             for i in range(train.shape[0]):
-                f = self.pointIndex[str(train.iloc[i])]
-                j = self.pointIndex[str(point)]
-                distance = self.euclidean[f][j]
+                try:
+                    f = self.pointIndex[str(train.iloc[i])]
+                except KeyError:
+                    f = None
+                try:
+                    j = self.pointIndex[str(point)]
+                except KeyError:
+                    j = None
+
+                if(f == None or j == None):
+                    distance = self.euclideanDistance(train.iloc[i], point)
+                else:
+                    distance = self.euclidean[f][j]
                 distances.append([distance, i])
             distances.sort()
             return distances[:self.k]
