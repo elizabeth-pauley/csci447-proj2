@@ -60,7 +60,7 @@ class Kmeans:
         self.predictions = self.__finalPredictCluster()
         print("K-MEANS COMPLETE")
 
-    def __euclideanDistance(self, p1, p2):
+    def __euclideanDistance(self, p1, p2): # self, p1, p2
         return np.sqrt(np.sum((p1 - p2) ** 2))
 
     def __pointsToClusters(self, displayProcess):
@@ -73,14 +73,17 @@ class Kmeans:
             if i == 0 and displayProcess:
                 print("First example being assigned a cluster: ")
                 print(row)
+
             distances = []
 
             # Calculate distance between given example and each current centroid
             if i == 0 and displayProcess:
                 print(f"Calculating distances between first example and centroids 0 through {self.k}...")
+
             for j in range(self.k):
                 dist = self.__euclideanDistance(row.values, self.centroids[j])
                 distances.append(dist)
+
             # Choose predicted cluster based on closest distance
             assignedCluster = np.argmin(distances)
             if i == 0 and displayProcess:
@@ -116,7 +119,10 @@ class Kmeans:
         return predictions
 
     def getCentroids(self):
-        return pd.DataFrame(self.centroids)
+        centroidArray = []
+        for c in self.centroids:
+            centroidArray.append(c.values.flatten())
+        return pd.DataFrame(centroidArray)
 
     def getPredictions(self):
         return self.predictions
@@ -126,7 +132,7 @@ class Kmeans:
         # graph data w/ colors being clusters
         # red set aside for centroids
         print("DATA: ")
-        print(self.data.isna().count())
+        print(self.data.isna().sum())
         #dataPCA = PCA(n_components=2)
         #dataTransformed = dataPCA.fit_transform(self.data)
 
